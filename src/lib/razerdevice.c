@@ -78,8 +78,9 @@ static RazerDevices getAllRazerHostDevices(void)
         RazerDevice newDevice = { .usbDevice = NULL, .internalDeviceId = array_index, .productId = (UInt16)pid };
         razerDevices[array_index] = newDevice;
 
-        // Helpful debug
-        printf("[librazermacos] IOUSBHostDevice found: vid=0x%04x pid=0x%04x\n", (unsigned)vid, (unsigned)pid);
+        // Helpful debug (stderr so Electron shows it reliably)
+        fprintf(stderr, "[librazermacos] IOUSBHostDevice found: vid=0x%04x pid=0x%04x\n", (unsigned)vid, (unsigned)pid);
+        fflush(stderr);
     }
 
     IOObjectRelease(iter);
@@ -99,6 +100,8 @@ bool is_razer_device(IOUSBDeviceInterface **dev)
     kr = (*dev)->GetDeviceVendor(dev, &vendor);
     kr = (*dev)->GetDeviceProduct(dev, &product);
     kr = (*dev)->GetDeviceReleaseNumber(dev, &release);
+
+    (void)kr; // silence unused warning (we don't need the result here)
 
     return vendor == USB_VENDOR_ID_RAZER;
 }
@@ -460,10 +463,14 @@ void closeRazerUSBDeviceInterface(IOUSBDeviceInterface **dev)
     kern_return_t kr;
     kr = (*dev)->USBDeviceClose(dev);
     kr = (*dev)->Release(dev);
+    (void)kr;
 }
 
 RazerDevices getAllRazerDevices()
 {
+    fprintf(stderr, "[librazermacos] getAllRazerDevices() called\n");
+    fflush(stderr);
+
     RazerDevices allDevices = { .devices = NULL, .size = 0 };
 
     CFMutableDictionaryRef matchingDict;
@@ -555,7 +562,8 @@ RazerDevices getAllRazerDevices()
     if (array_size == 0)
     {
         free(razerDevices);
-        printf("[librazermacos] Legacy IOUSBDevice scan found 0 devices; trying IOUSBHostDevice...\n");
+        fprintf(stderr, "[librazermacos] Legacy IOUSBDevice scan found 0 devices; trying IOUSBHostDevice...\n");
+        fflush(stderr);
         return getAllRazerHostDevices();
     }
 
