@@ -64,6 +64,8 @@ static int razer_get_report(IOUSBDeviceInterface **usb_dev, struct razer_report 
     case USB_DEVICE_ID_RAZER_BASILISK_V3_X_HYPERSPEED:
     case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRED:
     case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRELESS:
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
         return razer_get_usb_response(usb_dev, index, request_report, index, response_report, RAZER_NEW_MOUSE_RECEIVER_WAIT_MIN_US);
         break;
 
@@ -584,6 +586,13 @@ ssize_t razer_attr_write_logo_mode_wave(IOUSBDeviceInterface **usb_dev, const ch
         report.transaction_id.id = 0x1f;
         break;
 
+    // Single lighting zone; addressed as the whole device
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+        report = razer_chroma_extended_matrix_effect_wave(VARSTORE, ZERO_LED, direction, 0x28);
+        report.transaction_id.id = 0x1f;
+        break;
+
     default:
         printf("razermouse: logo_mode_wave not supported for this model\n");
         return count;
@@ -725,6 +734,13 @@ ssize_t razer_attr_write_logo_mode_static(IOUSBDeviceInterface **usb_dev, const 
             report = razer_chroma_standard_set_led_rgb(VARSTORE, LOGO_LED, (struct razer_rgb*)&buf[0]);
             report.transaction_id.id = 0x3F;
             break;
+        // Single lighting zone; addressed as the whole device
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_extended_matrix_effect_static(VARSTORE, ZERO_LED, (struct razer_rgb*)&buf[0]);
+            report.transaction_id.id = 0x1f;
+            break;
+
         default:
             printf("razermouse: logo_mode_static not supported for this model\n");
             return count;
@@ -908,6 +924,13 @@ ssize_t razer_attr_write_logo_mode_static_no_store(IOUSBDeviceInterface **usb_de
             report.transaction_id.id = 0x1f;
             break;
 
+        // Single lighting zone; addressed as the whole device
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_extended_matrix_effect_static(NOSTORE, ZERO_LED, (struct razer_rgb*)&buf[0]);
+            report.transaction_id.id = 0x1f;
+            break;
+
         default:
             printf("razermouse: logo_mode_static not supported for this model\n");
             return count;
@@ -1073,6 +1096,13 @@ ssize_t razer_attr_write_logo_mode_spectrum(IOUSBDeviceInterface **usb_dev, cons
     case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRED:
     case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRELESS:
         report = razer_chroma_extended_matrix_effect_spectrum(VARSTORE, LOGO_LED);
+        report.transaction_id.id = 0x1f;
+        break;
+
+    // Single lighting zone; addressed as the whole device
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+        report = razer_chroma_extended_matrix_effect_spectrum(VARSTORE, ZERO_LED);
         report.transaction_id.id = 0x1f;
         break;
 
@@ -1438,6 +1468,13 @@ ssize_t razer_attr_write_logo_mode_none(IOUSBDeviceInterface **usb_dev, const ch
         break;
 
 
+    // Single lighting zone; addressed as the whole device
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+    case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+        report = razer_chroma_extended_matrix_effect_none(VARSTORE, ZERO_LED);
+        report.transaction_id.id = 0x1f;
+        break;
+
     default:
         printf("razermouse: logo_mode_none not supported for this model\n");
         return count;
@@ -1768,7 +1805,18 @@ ssize_t razer_attr_write_right_mode_reactive(IOUSBDeviceInterface **usb_dev, con
 ushort razer_attr_read_dpi(IOUSBDeviceInterface **usb_dev)
 {
     struct razer_report report, response_report;
-    report = razer_chroma_misc_get_dpi_xy(0x01);
+    report = razer_chroma_misc_get_dpi_xy(VARSTORE);
+
+    UInt16 product = -1;
+    (*usb_dev)->GetDeviceProduct(usb_dev, &product);
+
+    switch(product) {
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_misc_get_dpi_xy(NOSTORE);
+            report.transaction_id.id = 0x1f;
+            break;
+    }
 
     response_report = razer_send_payload(usb_dev, &report);
     ushort dpi_x = (response_report.arguments[1] << 8) | (response_report.arguments[2] & 0xFF);
@@ -1777,7 +1825,17 @@ ushort razer_attr_read_dpi(IOUSBDeviceInterface **usb_dev)
 
 void razer_attr_write_dpi(IOUSBDeviceInterface **usb_dev, ushort dpi_x, ushort dpi_y)
 {
-    struct razer_report report = razer_chroma_misc_set_dpi_xy(0x01, dpi_x, dpi_y);
+    struct razer_report report = razer_chroma_misc_set_dpi_xy(VARSTORE, dpi_x, dpi_y);
+
+    UInt16 product = -1;
+    (*usb_dev)->GetDeviceProduct(usb_dev, &product);
+
+    switch(product) {
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report.transaction_id.id = 0x1f;
+            break;
+    }
     razer_send_payload(usb_dev, &report);
 }
 
@@ -1807,6 +1865,8 @@ ssize_t razer_attr_read_get_battery(IOUSBDeviceInterface **usb_dev, char *buf)
         case USB_DEVICE_ID_RAZER_OROCHI_V2_BLUETOOTH:
         case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRED:
         case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRELESS:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
             report.transaction_id.id = 0x1f;
             break;
     }
@@ -1847,6 +1907,8 @@ ssize_t razer_attr_read_is_charging(IOUSBDeviceInterface **usb_dev, char *buf)
         case USB_DEVICE_ID_RAZER_BASILISK_ULTIMATE:
         case USB_DEVICE_ID_RAZER_LANCEHEAD_WIRELESS_RECEIVER:
         case USB_DEVICE_ID_RAZER_LANCEHEAD_WIRELESS_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
             report.transaction_id.id = 0x1f;
             break;
     }
@@ -1915,6 +1977,8 @@ ushort razer_attr_read_poll_rate(IOUSBDeviceInterface **usb_dev)
         case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRELESS:
         case USB_DEVICE_ID_RAZER_OROCHI_V2_RECEIVER:
         case USB_DEVICE_ID_RAZER_OROCHI_V2_BLUETOOTH:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
             report.transaction_id.id = 0x1f;
             break;
     }
@@ -1931,6 +1995,9 @@ ushort razer_attr_read_poll_rate(IOUSBDeviceInterface **usb_dev)
             break;
         case  0x02:
             polling_rate = 500;
+            break;
+        case  0x04:
+            polling_rate = 250;
             break;
         case  0x08:
             polling_rate = 125;
@@ -2015,6 +2082,8 @@ void razer_attr_write_poll_rate(IOUSBDeviceInterface **usb_dev, ushort polling_r
         case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRELESS:
         case USB_DEVICE_ID_RAZER_OROCHI_V2_RECEIVER:
         case USB_DEVICE_ID_RAZER_OROCHI_V2_BLUETOOTH:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
             report.transaction_id.id = 0x1f;
             break;
     }
@@ -2065,6 +2134,13 @@ void razer_attr_write_matrix_brightness(IOUSBDeviceInterface **usb_dev, unsigned
         case USB_DEVICE_ID_RAZER_NAGA_TRINITY:
             // Naga Trinity uses the LED 0x00 and Matrix Brightness
             report = razer_chroma_extended_matrix_brightness(VARSTORE, 0x00, brightness);
+            break;
+
+        // Brightness only answers on the underglow zone, not ZERO_LED
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_extended_matrix_brightness(VARSTORE, BASILISK_V3_BASE_LED, brightness);
+            report.transaction_id.id = 0x1f;
             break;
 
         default:
@@ -2124,6 +2200,13 @@ ushort razer_attr_read_matrix_brightness(IOUSBDeviceInterface **usb_dev)
         case USB_DEVICE_ID_RAZER_NAGA_TRINITY:
             // Naga Trinity uses the LED 0x00 and Matrix Brightness
             report = razer_chroma_extended_matrix_get_brightness(VARSTORE, 0x00);
+            break;
+
+        // Brightness only answers on the underglow zone, not ZERO_LED
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_extended_matrix_get_brightness(VARSTORE, BASILISK_V3_BASE_LED);
+            report.transaction_id.id = 0x1f;
             break;
 
         default:
@@ -2313,6 +2396,13 @@ ushort razer_attr_read_logo_led_brightness(IOUSBDeviceInterface **usb_dev)
             report = razer_chroma_extended_matrix_get_brightness(VARSTORE, LOGO_LED);
             break;
 
+        // Brightness only answers on the underglow zone, not ZERO_LED
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_extended_matrix_get_brightness(VARSTORE, BASILISK_V3_BASE_LED);
+            report.transaction_id.id = 0x1f;
+            break;
+
         default:
             report = razer_chroma_standard_get_led_brightness(VARSTORE, LOGO_LED);
             break;
@@ -2379,6 +2469,13 @@ void razer_attr_write_logo_led_brightness(IOUSBDeviceInterface **usb_dev, unsign
         case USB_DEVICE_ID_RAZER_DEATHADDER_V2_PRO_WIRELESS:
         case USB_DEVICE_ID_RAZER_DEATHADDER_V2_MINI:
             report = razer_chroma_extended_matrix_brightness(VARSTORE, LOGO_LED, brightness);
+            break;
+
+        // Brightness only answers on the underglow zone, not ZERO_LED
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRED:
+        case USB_DEVICE_ID_RAZER_PRO_CLICK_V2_VERTICAL_EDITION_WIRELESS:
+            report = razer_chroma_extended_matrix_brightness(VARSTORE, BASILISK_V3_BASE_LED, brightness);
+            report.transaction_id.id = 0x1f;
             break;
 
         default:
