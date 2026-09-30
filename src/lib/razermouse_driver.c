@@ -2099,7 +2099,6 @@ void razer_attr_write_poll_rate(IOUSBDeviceInterface **usb_dev, ushort polling_r
 
 void razer_attr_write_matrix_brightness(IOUSBDeviceInterface **usb_dev, unsigned char brightness)
 {
-    brightness = round(brightness * 2.55);
     struct razer_report report = {0};
 
     UInt16 product = -1;
@@ -2107,7 +2106,8 @@ void razer_attr_write_matrix_brightness(IOUSBDeviceInterface **usb_dev, unsigned
 
     switch(product) {
         case USB_DEVICE_ID_RAZER_MAMBA_WIRELESS:
-            report = razer_chroma_misc_set_dock_brightness(brightness);
+            // The report builders below scale 0-100 to 0-255 themselves; the dock one does not
+            report = razer_chroma_misc_set_dock_brightness(round(brightness * 2.55));
             break;
 
         case USB_DEVICE_ID_RAZER_OROCHI_CHROMA:
