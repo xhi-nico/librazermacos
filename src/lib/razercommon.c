@@ -9,6 +9,12 @@
 
 #include "razercommon.h"
 
+static bool skip_responses = false;
+
+void razer_set_skip_responses(bool skip) {
+    skip_responses = skip;
+}
+
 /**
  * Send USB control report to the keyboard
  * USUALLY index = 0x02
@@ -56,6 +62,12 @@ IOReturn razer_get_usb_response(IOUSBDeviceInterface **dev, uint report_index, s
     if(retval != kIOReturnSuccess) {
         printf("razer_send_control_msg failed!\n");
         
+        return retval;
+    }
+
+    if (skip_responses) {
+        memcpy(response_report, request_report, sizeof(struct razer_report));
+        response_report->status = RAZER_CMD_SUCCESSFUL;
         return retval;
     }
 
