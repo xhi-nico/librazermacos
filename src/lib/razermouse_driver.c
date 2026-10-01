@@ -2127,6 +2127,11 @@ void razer_attr_write_matrix_brightness(IOUSBDeviceInterface **usb_dev, unsigned
         case USB_DEVICE_ID_RAZER_MAMBA_ELITE:
         case USB_DEVICE_ID_RAZER_BASILISK_V3:
         case USB_DEVICE_ID_RAZER_BASILISK_V3_35K:
+        case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_WIRED:
+        case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_WIRELESS:
+        case USB_DEVICE_ID_RAZER_BASILISK_V3_X_HYPERSPEED:
+        case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRED:
+        case USB_DEVICE_ID_RAZER_BASILISK_V3_PRO_35K_WIRELESS:
             report = razer_chroma_extended_matrix_brightness(VARSTORE, 0x00, brightness);
             report.transaction_id.id = 0x1F;
             break;
