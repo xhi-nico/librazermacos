@@ -15,6 +15,34 @@ void razer_set_skip_responses(bool skip) {
     skip_responses = skip;
 }
 
+static IOReturn usb_error = kIOReturnSuccess;
+
+IOReturn razer_take_usb_error(void) {
+    IOReturn error = usb_error;
+    usb_error = kIOReturnSuccess;
+    return error;
+}
+
+IOReturn razer_device_request(IOUSBDeviceInterface **dev, IOUSBDevRequest *request) {
+    IOUSBDevRequestTO timed = {
+        .bmRequestType = request->bmRequestType,
+        .bRequest = request->bRequest,
+        .wValue = request->wValue,
+        .wIndex = request->wIndex,
+        .wLength = request->wLength,
+        .pData = request->pData,
+        .noDataTimeout = RAZER_USB_TIMEOUT_MS,
+        .completionTimeout = RAZER_USB_TIMEOUT_MS,
+    };
+    IOUSBDeviceInterface182 **timedDev = (IOUSBDeviceInterface182 **) dev;
+    IOReturn result = (*timedDev)->DeviceRequestTO(timedDev, &timed);
+    request->wLenDone = timed.wLenDone;
+    if (result != kIOReturnSuccess && usb_error == kIOReturnSuccess) {
+        usb_error = result;
+    }
+    return result;
+}
+
 /**
  * Send USB control report to the keyboard
  * USUALLY index = 0x02
@@ -30,7 +58,7 @@ IOReturn razer_send_control_msg(IOUSBDeviceInterface **dev, void const *data, ui
     request.wLength = RAZER_USB_REPORT_LEN;
     request.pData = (void*)data;
     
-    return (*dev)->DeviceRequest(dev, &request);
+    return razer_device_request(dev, &request);
 }
 
 
@@ -82,7 +110,7 @@ IOReturn razer_get_usb_response(IOUSBDeviceInterface **dev, uint report_index, s
     request.wLength = RAZER_USB_REPORT_LEN;
     request.pData = buffer;
     
-    retval = (*dev)->DeviceRequest(dev, &request);
+    retval = razer_device_request(dev, &request);
     
     if(retval != kIOReturnSuccess) {
         printf("razer_get_usb_response failed\n");
@@ -180,5 +208,5 @@ IOReturn razer_send_control_msg_old_device(IOUSBDeviceInterface **dev, void cons
     request.wLength = report_size;
     request.pData = (void*)data;
 
-    return (*dev)->DeviceRequest(dev, &request);
+    return razer_device_request(dev, &request);
 }

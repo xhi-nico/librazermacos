@@ -37,7 +37,7 @@ IOReturn razer_kraken_send_control_msg(IOUSBDeviceInterface **dev, struct razer_
     request.wLength = 37;
     request.pData = (void*)data;
 
-    IOReturn result = (*dev)->DeviceRequest(dev, &request);
+    IOReturn result = razer_device_request(dev, &request);
 
     // Wait
     if(skip != 1) {

@@ -107,6 +107,26 @@ struct razer_report {
     unsigned char reserved; /*0x0*/
 };
 
+/**
+ * Every USB request gives up after this long, so a device that stops answering
+ * blocks its caller for at most this rather than indefinitely.
+ */
+#define RAZER_USB_TIMEOUT_MS 500
+
+/**
+ * Sends one control request with RAZER_USB_TIMEOUT_MS, and records a failure
+ * for razer_take_usb_error. `dev` must come from kIOUSBDeviceInterfaceID182 or
+ * later, which every device this library opens does.
+ */
+IOReturn razer_device_request(IOUSBDeviceInterface **dev, IOUSBDevRequest *request);
+
+/**
+ * The first USB failure since the last call (device gone, stalled, timed out),
+ * or kIOReturnSuccess; resets it. The driver functions return no status, so
+ * callers clear this before a call and read it after.
+ */
+IOReturn razer_take_usb_error(void);
+
 IOReturn razer_send_control_msg(IOUSBDeviceInterface **dev, void const *data, uint report_index);
 IOReturn razer_send_control_msg_old_device(IOUSBDeviceInterface **dev, void const *data, uint report_value, uint report_index, uint report_size);
 IOReturn razer_get_usb_response(IOUSBDeviceInterface **dev, uint report_index, struct razer_report* request_report, uint response_index, struct razer_report* response_report, int wait_us);

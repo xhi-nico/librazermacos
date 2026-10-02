@@ -277,7 +277,7 @@ IOUSBDeviceInterface **getRazerUSBDeviceInterface(int type)
 		}
 
 		IOUSBDeviceInterface **dev = NULL;
-		HRESULT hResult = (*plugInInterface)->QueryInterface(plugInInterface, CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID), (LPVOID *)&dev);
+		HRESULT hResult = (*plugInInterface)->QueryInterface(plugInInterface, CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID182), (LPVOID *)&dev);
 
 		(*plugInInterface)->Release(plugInInterface); // Not needed after device interface created
 		if (hResult || !dev)
@@ -427,7 +427,7 @@ RazerDevices getAllRazerDevices()
         }
 
         IOUSBDeviceInterface **dev = NULL;
-        HRESULT hResult = (*plugInInterface)->QueryInterface(plugInInterface, CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID), (LPVOID *)&dev);
+        HRESULT hResult = (*plugInInterface)->QueryInterface(plugInInterface, CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID182), (LPVOID *)&dev);
 
         (*plugInInterface)->Release(plugInInterface); // Not needed after device interface created
         if (hResult || !dev)
