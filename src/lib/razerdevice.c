@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include "razerdevice.h"
 
 bool is_razer_device(IOUSBDeviceInterface **dev)
@@ -387,14 +388,30 @@ void closeRazerUSBDeviceInterface(IOUSBDeviceInterface **dev)
 	kr = (*dev)->Release(dev);
 }
 
+bool isRazerUsbEntry(io_service_t usbDevice)
+{
+    CFTypeRef vendorId = IORegistryEntryCreateCFProperty(usbDevice, CFSTR(kUSBVendorID), kCFAllocatorDefault, 0);
+    if (vendorId == NULL)
+    {
+        return false;
+    }
+    SInt32 value = 0;
+    bool matches = CFGetTypeID(vendorId) == CFNumberGetTypeID()
+        && CFNumberGetValue((CFNumberRef) vendorId, kCFNumberSInt32Type, &value)
+        && value == USB_VENDOR_ID_RAZER;
+    CFRelease(vendorId);
+    return matches;
+}
+
 RazerDevices getAllRazerDevices()
 {
-    RazerDevices allDevices = { .devices = NULL, .size = 0 };
+    RazerDevices allDevices = { .devices = NULL, .size = 0, .openError = kIOReturnSuccess };
 
     CFMutableDictionaryRef matchingDict;
     matchingDict = IOServiceMatching(kIOUSBDeviceClassName);
     if (matchingDict == NULL)
     {
+        allDevices.openError = kIOReturnNoMemory;
         return allDevices;
     }
 
@@ -403,6 +420,7 @@ RazerDevices getAllRazerDevices()
             IOServiceGetMatchingServices(MACH_PORT_NULL, matchingDict, &iter);
     if (kReturn != kIOReturnSuccess)
     {
+        allDevices.openError = kReturn;
         return allDevices;
     }
 
@@ -413,6 +431,12 @@ RazerDevices getAllRazerDevices()
     io_service_t usbDevice;
     while ((usbDevice = IOIteratorNext(iter)))
     {
+        if (!isRazerUsbEntry(usbDevice))
+        {
+            IOObjectRelease(usbDevice);
+            continue;
+        }
+
         IOCFPlugInInterface **plugInInterface = NULL;
         SInt32 score;
 
@@ -422,7 +446,7 @@ RazerDevices getAllRazerDevices()
         IOObjectRelease(usbDevice); // Not needed after plugin created
         if ((kReturn != kIOReturnSuccess) || plugInInterface == NULL)
         {
-            // printf("Unable to create plugin (0x%08x)\n", kReturn);
+            allDevices.openError = kReturn != kIOReturnSuccess ? kReturn : kIOReturnError;
             continue;
         }
 
@@ -432,14 +456,7 @@ RazerDevices getAllRazerDevices()
         (*plugInInterface)->Release(plugInInterface); // Not needed after device interface created
         if (hResult || !dev)
         {
-            // printf("Couldn’t create a device interface (0x%08x)\n", (int) hResult);
-            continue;
-        }
-
-        // Filter out non-Razer devices
-        if (!is_razer_device(dev))
-        {
-            (*dev)->Release(dev);
+            allDevices.openError = kIOReturnError;
             continue;
         }
 
@@ -461,6 +478,7 @@ RazerDevices getAllRazerDevices()
         if (kReturn != kIOReturnSuccess)
         {
             printf("Unable to open USB device: %08x\n", kReturn);
+            allDevices.openError = kReturn;
             (*dev)->Release(dev);
             continue;
         }

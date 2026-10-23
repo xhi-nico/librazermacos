@@ -42,10 +42,17 @@ typedef struct {
 typedef struct {
     RazerDevice *devices;
     int size;
+    // kIOReturnSuccess when every Razer device in the USB registry was opened;
+    // otherwise the last failure: a device still starting up or held by another
+    // process, or the registry could not be read.
+    IOReturn openError;
 } RazerDevices;
 
 IOUSBDeviceInterface **getRazerUSBDeviceInterface(int type);
 void closeRazerUSBDeviceInterface(IOUSBDeviceInterface **dev);
+
+// Whether a USB registry entry is a Razer device, from its properties, without opening it.
+bool isRazerUsbEntry(io_service_t usbDevice);
 
 RazerDevices getAllRazerDevices();
 void closeAllRazerDevices(RazerDevices devices);
